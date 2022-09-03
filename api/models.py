@@ -102,7 +102,7 @@ def update_weight_record(username,created,update_item):
     return query_table.update_item(
                 Key={'username': username, 'created': created
                 },
-                UpdateExpression='SET acceptfrom = :acceptfrom, acceptto = :acceptto, fromcity = :fromcity, tocity = :tocity, trdate = :trdate, allowed = :allowed, currency = :currency',    
+                UpdateExpression='SET acceptfrom = :acceptfrom, acceptto = :acceptto, fromcity = :fromcity, tocity = :tocity, trdate = :trdate, allowed = :allowed, currency = :currency, fromto = :fromto, tstamp = :tstamp',
                 ExpressionAttributeValues={
                 ':acceptfrom': update_item['acceptfrom'],
                 ':acceptto': update_item['acceptto'],
@@ -110,7 +110,9 @@ def update_weight_record(username,created,update_item):
                 ':tocity': update_item['tocity'],
                 ':trdate': update_item['trdate'],
                 ':allowed': update_item['allowed'],
-                ':currency': update_item['currency']
+                ':currency': update_item['currency'],
+                ':fromto': update_item['fromto'],
+                ':tstamp': update_item['tstamp']
                 }
             )
     

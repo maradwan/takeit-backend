@@ -4,6 +4,7 @@ from os import environ as env
 from api.auth import gen_time, token_username, today_date
 from api.models import get_record, add_record, get_records, delete_record, delete_records, update_weight_record, get_global_index, get_record_begins_with
 from api import app
+from time import time
 
 #weight_limit = env.get("WEIGHT_LIMIT")
 #region_name  = env.get("REGION_NAME")
@@ -47,6 +48,7 @@ def add_weight():
             data['username'] = username
             data['created'] = gen_time()
             data['fromto'] =  data['fromcity'] + '_' + data['tocity']
+            data['tstamp'] = int(time())
 
             add_record(data)
             return jsonify(data),201
@@ -94,6 +96,9 @@ def update_weight(created):
         if data['acceptfrom'] and data['acceptto'] and data['fromcity'] and data['tocity'] and data['trdate'] and data['allowed'] and data['currency'] and len(data) == 7:
             data['username'] = username
             data['created'] = created
+            data['fromto'] =  data['fromcity'] + '_' + data['tocity']
+            data['tstamp'] = int(time())
+
             update_weight_record(username, created, data)
             return jsonify(data),201
             
