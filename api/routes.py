@@ -36,7 +36,8 @@ def check_username(username):
 @app.route('/weight', methods=['POST'])
 def add_weight():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     if (user_limit_weight()):
         return jsonify('{} Records Limit Reached'.format(get_weight.item_limit)),426
@@ -60,8 +61,9 @@ def add_weight():
 @app.route('/weight', methods=['GET'])
 def get_weight():
     
-      username = token_username()
-      print(username)
+      user = token_username()
+      username = user['cognito:username']
+      
       try:
           response = get_records(username)
           
@@ -78,7 +80,8 @@ def get_weight():
 @app.route('/weight/<created>', methods=['DELETE'])
 def delete_weight(created):
   
-  username = token_username()
+  user = token_username()
+  username = user['cognito:username']
 
   try:     
       delete_record(username,created)
@@ -88,7 +91,8 @@ def delete_weight(created):
   
 @app.route('/weight/<created>', methods=['PUT'])
 def update_weight(created):
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
          
     try:
         data = request.json
@@ -110,7 +114,8 @@ def update_weight(created):
 @app.route('/contacts', methods=['POST'])
 def add_contacts():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         data = request.json
@@ -135,6 +140,8 @@ def add_contacts():
                         
             contact['username'] = username
             contact['created'] = "contacts"
+            contact['name'] = user['name']
+            
             add_record(contact)
             return jsonify(contact),201
             
@@ -146,7 +153,8 @@ def add_contacts():
 @app.route('/contacts', methods=['GET'])
 def get_contacts():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         response = get_record(username, 'contacts')
@@ -161,7 +169,8 @@ def get_contacts():
 @app.route('/contacts', methods=['DELETE'])
 def delete_contacts():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         delete_record(username, 'contacts')
@@ -176,7 +185,8 @@ def delete_contacts():
 @app.route('/share-request', methods=['POST'])
 def share_request():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         data = request.json
@@ -229,7 +239,8 @@ def share_request():
 @app.route('/share-request/accept/<created>', methods=['POST'])
 def accept_request(created):
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         data = {}
@@ -256,7 +267,8 @@ def accept_request(created):
 @app.route('/share-request/accept', methods=['GET'])
 def get_accept():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         
@@ -272,7 +284,8 @@ def get_accept():
 @app.route('/share-request/accept/<contact>', methods=['DELETE'])
 def delete_accept(contact):
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         delete_record(username, contact)
@@ -290,7 +303,8 @@ def delete_accept(contact):
 @app.route('/share-request/pending', methods=['GET'])
 def pending_request():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         response = get_record_begins_with(username,'pending')
@@ -304,7 +318,8 @@ def pending_request():
 @app.route('/share-request/request', methods=['GET'])
 def get_request():
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
     
     try:
         response = get_record_begins_with(username,'request')
@@ -319,7 +334,8 @@ def get_request():
 @app.route('/share-request/request/<contact>', methods=['DELETE'])
 def delete_request(contact):
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         #Delete request from sender
@@ -342,7 +358,8 @@ def delete_request(contact):
 @app.route('/share-request/<created>', methods=['DELETE'])
 def reject_request(created):
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
        data = {}
@@ -372,7 +389,8 @@ def reject_request(created):
 @app.route('/contacts/<contact>', methods=['GET'])
 def get_contact(contact):
     
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
 
     try:
         contact_id = 'accepted' + '_' + username
@@ -421,7 +439,8 @@ def fromto(city):
 @app.route('/account', methods=['GET'])
 def user_account():
       try:
-          username = token_username()
+          user = token_username()
+          username = user['cognito:username']
           
           data = get_record(username,item='account')
 
@@ -438,7 +457,8 @@ def user_account():
 
 @app.route('/account', methods=['DELETE'])
 def delete_account():
-    username = token_username()
+    user = token_username()
+    username = user['cognito:username']
     
     try:
         cognito = boto3.client('cognito-idp',region_name = region_name, verify=True)

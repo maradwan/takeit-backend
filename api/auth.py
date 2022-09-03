@@ -30,10 +30,10 @@ def token_username():
            if token.split()[0] == "Bearer":
                user = validate_cognito_token(token.split()[1],cognito_region,cognito_user_pool_id,cognito_app_client_id) 
            #    # It is important to split as the token has one space
-               return user['cognito:username']
+               return user
            user = validate_cognito_token(token.split()[0],cognito_region,cognito_user_pool_id,cognito_app_client_id) 
         
-           return user['cognito:username']
+           return user
     except:
         return jsonify('Misunderstood Request'),401
 
