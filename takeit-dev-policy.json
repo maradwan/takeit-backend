@@ -48,7 +48,10 @@
         {
             "Sid": "VisualEditor4",
             "Effect": "Allow",
-            "Action": "cognito-idp:AdminDeleteUser",
+            "Action": [
+                "cognito-idp:AdminDeleteUser",
+                "cognito-idp:AdminGetUser"
+            ],
             "Resource": "*"
         }
     ]

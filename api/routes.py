@@ -2,9 +2,10 @@ from flask import request, jsonify
 import boto3
 from os import environ as env
 from api.auth import gen_time, token_username, today_date
-from api.models import get_record, add_record, get_records, delete_record, delete_records, update_weight_record, get_global_index, get_record_begins_with
+from api.models import get_record, add_record, get_records, delete_record, delete_records, update_weight_record, get_global_index, get_record_begins_with, update_user_request
 from api import app
-from time import time
+from time import mktime, time
+from datetime import datetime, timedelta
 
 #weight_limit = env.get("WEIGHT_LIMIT")
 #region_name  = env.get("REGION_NAME")
@@ -13,7 +14,7 @@ userpoolid = env.get("USERPOOLID")
 
 region_name = "eu-west-1"
 weight_limit = 100
-userpoolid = "eu-west-1_02tYu4pUt"
+userpoolid = "eu-west-1_1vDh1VG69"
 
 
 def user_limit_weight():
@@ -49,7 +50,16 @@ def add_weight():
             data['username'] = username
             data['created'] = gen_time()
             data['fromto'] =  data['fromcity'] + '_' + data['tocity']
-            data['tstamp'] = int(time())
+            
+            datestamp = data['trdate']
+            #change date to Epoch 
+            epoch_time= int(mktime(datetime.strptime(datestamp, "%Y-%m-%d").timetuple()))
+            
+            #Add days to the date
+            orig = datetime.fromtimestamp(epoch_time)
+            new = orig + timedelta(days=30)
+    
+            data['tstamp'] = int(new.timestamp())
 
             add_record(data)
             return jsonify(data),201
@@ -101,7 +111,16 @@ def update_weight(created):
             data['username'] = username
             data['created'] = created
             data['fromto'] =  data['fromcity'] + '_' + data['tocity']
-            data['tstamp'] = int(time())
+           
+            datestamp = data['trdate']
+            #change date to Epoch 
+            epoch_time= int(mktime(datetime.strptime(datestamp, "%Y-%m-%d").timetuple()))
+            
+            #Add days to the travel date
+            orig = datetime.fromtimestamp(epoch_time)
+            new = orig + timedelta(days=30)
+    
+            data['tstamp'] = int(new.timestamp())
 
             update_weight_record(username, created, data)
             return jsonify(data),201
@@ -192,14 +211,19 @@ def share_request():
         data = request.json
         
         # Adding request to the sender
-        if data['requestuser'] and len(data) == 1:
+        if data['requestuser'] and data['topicid'] and len(data) == 2:
             
+            created_id = data['topicid']
             request_user = data['requestuser']
             
             #Check the request_user exsit
             if not check_username(request_user):
                 return jsonify('requestuser is not registered'),400
- 
+            
+            #Check if user sent request to his username
+            if request_user == username:
+                return jsonify('cannot send requestuser to yourself'),400
+                
             
             #Check only one request has been sent
             sender_accepted = "accepted" + "_" + request_user
@@ -210,19 +234,31 @@ def share_request():
                 if sender_accepted in check_record['Items'][0]['created']:
                     return jsonify('already requestuser has your request'),200
             
+            
             del data['requestuser']
+            del data['topicid']
+            
             data['username'] = username
             data['created'] = "request" + "_" + request_user
             data['dtime'] = gen_time()
+            
+            #Add TTL
+            orig = datetime.fromtimestamp(int(time()))
+            new = orig + timedelta(days=30)
+            data['tstamp'] = int(new.timestamp())
+            
             add_record(data)         
             
         # Share the contacts of sender with the receiver
             data['created'] = "accepted" + "_" + request_user
+            data['req_status']  = "not_approved"
             add_record(data) 
+            del data['req_status']
             
         # Adding pending to the receiver
             data['fromuser'] = username
             data['created'] = "pending" + "_" + username
+            data['topicid'] = created_id
 
             data['username'] = request_user
             add_record(data)   
@@ -243,8 +279,12 @@ def accept_request(created):
     username = user['cognito:username']
 
     try:
+        
+        response = get_record(username, created)
+        if response['Items'] == []:
+            return jsonify('Not Found'),404    
+        
         data = {}
-
         data['username'] = username
         data['dtime'] = gen_time()
         
@@ -254,12 +294,16 @@ def accept_request(created):
 
         add_record(data)
         delete_record(username, created)
-        
+
         # Delete the request from the sender
         receiver_id = 'request' + '_' + username
-     
         delete_record(request_creator, receiver_id)
-            
+
+        # Add accepted to the request from the sender 
+        receiver_accepted = 'accepted' + '_' + username
+        update_user = {}
+        update_user['req_status'] = "approved"
+        update_user_request(request_creator,receiver_accepted,update_user)
         return jsonify('request has been accepted'),201
     except:
         return jsonify('Misunderstood Request'),400
@@ -466,6 +510,32 @@ def delete_account():
             UserPoolId= userpoolid,
             Username= username
             )
+        
+        # delete all requests from other users
+        user_pending = 'pending' + '_' + username
+        user_request = 'request' + '_' + username
+        user_accept = 'accepted' + '_' + username
+
+        
+        response_request = get_record_begins_with(username,'request_')
+        for i in range(len(response_request['Items'])):
+            delete_record(response_request['Items'][i]['created'].split('_')[-1], user_pending)
+        
+        response_pending = get_record_begins_with(username,'pending_')
+        for i in range(len(response_pending['Items'])):
+            delete_record(response_pending['Items'][i]['created'].split('_')[-1], user_request)
+            delete_record(response_pending['Items'][i]['created'].split('_')[-1], user_accept)
+        
+        
+        response_accepted = get_record_begins_with(username,'accepted_')
+        for i in range(len(response_accepted['Items'])):
+            if 'req_status' in response_accepted['Items'][i]:
+                if response_accepted['Items'][i]['req_status'] == 'not_approved':
+                    delete_record(response_accepted['Items'][i]['created'].split('_')[-1], user_pending)
+                
+            delete_record(response_accepted['Items'][i]['created'].split('_')[-1], user_accept) 
+               
+        
         delete_records(username)       
         
         #msg = message_body_deleted_account(username)
