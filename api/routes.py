@@ -386,7 +386,7 @@ def delete_request(contact):
         delete_record(username, contact)
         
         #Delete pending from receiver
-        receiver_user = contact.split('pending_')[1]
+        receiver_user = contact.split('request_')[1]
         receiver_pending = 'pending' + '_' + username
         delete_record(receiver_user, receiver_pending)
         
