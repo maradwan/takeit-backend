@@ -14,7 +14,7 @@
             },
         "s3_bucket": "zappa-takeit-dev",    
         "runtime": "python3.8",
-        "attach_policy":"takeit-dev-policy.json",
+        "attach_policy":"takeit-policy.json",
         "aws_environment_variables": {"TABLE_NAME": "sharing",
                                   "REGION_NAME": "eu-west-1",
                                   "WEIGHT_LIMIT": "5",

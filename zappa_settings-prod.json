@@ -1,0 +1,29 @@
+{
+    "prod": {
+        "app_function": "api.app",
+        "aws_region": "eu-west-1",
+        "profile_name": "takeit-prod",
+        "project_name": "takeit-prod",
+        "cors": true,
+        "keep_warm": false,
+            "authorizer": {
+                "type": "COGNITO_USER_POOLS",
+                "provider_arns": [
+                    "arn:aws:cognito-idp:eu-west-1:862514435220:userpool/eu-west-1_xgsIlhDow"
+                ]
+            },
+        "s3_bucket": "zappa-takeit-prod",    
+        "runtime": "python3.8",
+        "attach_policy":"takeit-policy.json",
+        "aws_environment_variables": {"TABLE_NAME": "sharing",
+                                  "REGION_NAME": "eu-west-1",
+                                  "WEIGHT_LIMIT": "5",
+                                  "SOURCE_EMAIL": "noreply@gozeit.com",
+                                  "USERPOOLID": "eu-west-1_xgsIlhDow",
+                                  "COGNITOR_CLIENTID": "75kr6sdi27mlllm7k2uggpidli"
+
+
+         }
+
+    }
+}
