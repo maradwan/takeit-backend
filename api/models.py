@@ -116,16 +116,6 @@ def update_weight_record(username,created,update_item):
                 }
             )
     
-def update_user_request(username,created,update_item):
-    return query_table.update_item(
-                Key={'username': username, 'created': created
-                },
-                UpdateExpression='SET req_status = :req_status',
-                ExpressionAttributeValues={
-                ':req_status': update_item['req_status']
-                }
-            )
-    
 def get_global_index(index,key,date,limit,today_date,lastkey=None):
     
     if lastkey:
