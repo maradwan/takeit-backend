@@ -130,6 +130,7 @@ def add_contacts():
     
     user = token_username()
     username = user['cognito:username']
+    name     = user['name']
 
     try:
         data = request.json
@@ -154,7 +155,7 @@ def add_contacts():
                         
             contact['username'] = username
             contact['created'] = "contacts"
-            contact['name'] = user['name']
+            contact['name'] = name
             
             add_record(contact)
             return jsonify(contact),201
@@ -193,8 +194,6 @@ def delete_contacts():
     except:
         return jsonify('Misunderstood Request'),400
     
-    
-    
 
 @app.route('/share-request', methods=['POST'])
 def share_request():
@@ -208,7 +207,7 @@ def share_request():
         # Adding request to the sender
         if data['traveleruser'] and data['tripid'] and data['trdate'] and len(data) == 3:
             
-            created_id = data['tripid']
+            tripid = data['tripid']
             request_user = data['traveleruser']
                        
             data['tstamp'] = tstamp(data['trdate'], 30)
@@ -224,7 +223,7 @@ def share_request():
                 
             
             #Check if the traveler has declined requester 
-            declined_traveler = 'travelerdeclined' + '_' + request_user
+            declined_traveler = 'travelerdeclined' + "_" + tripid + '_' + request_user
             check_declined = get_record(username, declined_traveler)
             
             if len(check_declined['Items']) >= 1:
@@ -233,7 +232,7 @@ def share_request():
                     return jsonify('traveleruser already declined your request'),200
             
             #Check only one requester has been sent
-            requester_accepted = "request" + "_" + request_user
+            requester_accepted = "request" + "_" + tripid + "_" + request_user
             check_requester = get_record(username, requester_accepted)
 
             if len(check_requester['Items']) >= 1:
@@ -242,7 +241,7 @@ def share_request():
                     return jsonify('already traveleruser has your request'),200
             
             #Check only one traveleraccepted has been sent
-            requester_traveleraccepted = "traveleraccepted" + "_" + request_user
+            requester_traveleraccepted = "traveleraccepted" + "_" + tripid + "_" + request_user
             check_traveleraccepted = get_record(username, requester_traveleraccepted)
 
             if len(check_traveleraccepted['Items']) >= 1:
@@ -250,11 +249,12 @@ def share_request():
                 if requester_traveleraccepted in check_traveleraccepted['Items'][0]['created']:
                     return jsonify('already requester accepted from traveleruser'),200
             
+            tripid = data['tripid']
             del data['traveleruser']
-            del data['tripid']
+            #del data['tripid']
             
             data['username'] = username
-            data['created'] = "request" + "_" + request_user
+            data['created'] = "request" + "_" + tripid + "_" + request_user
             data['dtime'] = gen_time()
             
             add_record(data)         
@@ -262,8 +262,8 @@ def share_request():
             
         # Adding pending to the traveler
             data['fromuser'] = username
-            data['created'] = "pending" + "_" + username
-            data['tripid'] = created_id
+            data['created'] = "pending" + "_" + tripid + "_" + username 
+            data['tripid'] = tripid
 
             data['username'] = request_user
             add_record(data)   
@@ -287,25 +287,31 @@ def traveler_accept_request(created):
         
         response = get_record(username, created)
         if response['Items'] == []:
-            return jsonify('Not Found'),404    
+            return jsonify('Not Found'),404
+        
+        tstamp = response['Items'][0]['tstamp']
+        tripid = response['Items'][0]['tripid']
         
         data = {}
         data['username'] = username
-        data['dtime'] = gen_time()
+        data['dtime']    = gen_time()
+        data['tstamp']   = tstamp
+        data['tripid']   = tripid
         
-        request_creator = created.split('pending_')[1]
-        acceptor = 'accepted' + '_' + request_creator
+        request_creator = created.split('_')[-1]
+
+        acceptor = 'accepted' + "_" + tripid + "_" + request_creator
         data['created'] = acceptor
 
         add_record(data)
         delete_record(username, created)
 
         # Delete the request from the sender
-        receiver_id = 'request' + '_' + username
+        receiver_id = 'request' + "_" + tripid + "_" + username
         delete_record(request_creator, receiver_id)
 
         # Add traveleraccepted to the requester from the traveler 
-        receiver_accepted = 'traveleraccepted' + '_' + username
+        receiver_accepted = 'traveleraccepted' + "_" + tripid + "_" + username
         
         data['username'] = request_creator
         data['created'] = receiver_accepted
@@ -323,31 +329,40 @@ def traveler_reject_request(created):
     username = user['cognito:username']
 
     try:
-       data = {}
-
-       data['username'] = username
-       data['created'] = created 
+        data = {}
+        data['username'] = username
+        data['created'] = created 
        
-       delete_record(username, created)
+        response = get_record(username, created)
+        tstamp = response['Items'][0]['tstamp']
+        tripid = response['Items'][0]['tripid']
+        
+        data['tstamp'] = tstamp
+        data['tripid'] = tripid
+        
+        if response['Items'] == []:
+            return jsonify('Not Found'),404
+        
+        delete_record(username, created)
               
-       # Delete the request from the requester
-       request_creator = created.split('pending_')[1]
-       receiver_id = 'request' + '_' + username
+        # Delete the request from the requester
+        request_creator = created.split('_')[-1]
+        receiver_id = 'request' + "_" + tripid + "_" + username
       
-       delete_record(request_creator, receiver_id)
+        delete_record(request_creator, receiver_id)
         
-       # declined the requester in the traveler view
-       declined_requester = 'declined' + '_' + request_creator
-       data['created'] = declined_requester
-       add_record(data)
+        # declined the requester in the traveler view
+        declined_requester = 'declined' + "_" + tripid  + "_" + request_creator
+        data['created'] = declined_requester
+        add_record(data)
        
-       # declined traveler in the requester view
-       declined_traveler = 'travelerdeclined' + '_' + username
-       data['created'] = declined_traveler
-       data['username'] = request_creator
-       add_record(data)
+        # declined traveler in the requester view
+        declined_traveler = 'travelerdeclined' + "_" + tripid + "_" + username
+        data['created'] = declined_traveler
+        data['username'] = request_creator
+        add_record(data)
         
-       return jsonify("Deleted: {}".format(created)),200
+        return jsonify("Deleted: {}".format(created)),200
              
     except:
         return jsonify('Misunderstood Request'),400
@@ -359,11 +374,17 @@ def traveler_delete_declined(contact):
     username = user['cognito:username']
 
     try:
+        response = get_record(username, contact)        
+        if response['Items'] == []:
+            return jsonify('Not Found'),404
+        
         delete_record(username, contact)
         
         # Delete the sharing between traveler and requester
-        receiver_id = contact.split('declined_')[1]
-        request_creator = "travelerdeclined_" + username 
+        receiver_id = contact.split('_')[-1]
+        tripid = contact.split('_')[1]
+        
+        request_creator = "travelerdeclined" + "_" + tripid + "_" + username 
         delete_record(receiver_id, request_creator)
            
         return jsonify("Deleted: {}".format(contact)),200
@@ -378,11 +399,16 @@ def traveler_delete_accept(contact):
     username = user['cognito:username']
 
     try:
+        response = get_record(username, contact)        
+        if response['Items'] == []:
+            return jsonify('Not Found'),404
+        
         delete_record(username, contact)
         
         # Delete the sharing between traveler and requester
-        receiver_id = contact.split('accepted_')[1]
-        request_creator = "traveleraccepted_" + username 
+        receiver_id = contact.split('_')[-1]
+        tripid = contact.split('_')[1]
+        request_creator = "traveleraccepted" + "_" + tripid + "_" + username 
         delete_record(receiver_id, request_creator)
            
         return jsonify("Deleted: {}".format(contact)),200
@@ -397,11 +423,16 @@ def requester_delete_traveleraccepted(contact):
     username = user['cognito:username']
 
     try:
+        response = get_record(username, contact)        
+        if response['Items'] == []:
+            return jsonify('Not Found'),404
+        
         delete_record(username, contact)
         
         # Delete the sharing between requester and traveler
-        receiver_id = contact.split('traveleraccepted_')[1]
-        request_creator = "accepted_" + username 
+        receiver_id = contact.split('_')[-1]
+        tripid = contact.split('_')[1]
+        request_creator = "accepted" + "_" + tripid + "_" + username 
         delete_record(receiver_id, request_creator)
            
         return jsonify("Deleted: {}".format(contact)),200
@@ -417,12 +448,17 @@ def delete_requester(contact):
     username = user['cognito:username']
 
     try:
+        response = get_record(username, contact)        
+        if response['Items'] == []:
+            return jsonify('Not Found'),404
+        
         #Delete request from requester
         delete_record(username, contact)
         
         #Delete pending from receiver
-        traveler_user = contact.split('request_')[1]
-        traveler_pending = 'pending' + '_' + username
+        traveler_user = contact.split('_')[-1]
+        tripid = contact.split('_')[1]
+        traveler_pending = 'pending' + "_" + tripid + "_" + username
         delete_record(traveler_user, traveler_pending)
                
         return jsonify("Deleted: {}".format(contact)),200
@@ -538,26 +574,29 @@ def get_requester(contact):
     username = user['cognito:username']
 
     try:
-        contact_id_traveleraccepted = 'traveleraccepted' + '_' + username
+        
+        tripid = contact.split('_')[0]
+        requester_username = contact.split('_')[-1]
+        contact_id_traveleraccepted = 'traveleraccepted' + "_" + tripid + "_" + username
                 
-        record_traveleraccepted = get_record(contact, contact_id_traveleraccepted)
+        record_traveleraccepted = get_record(requester_username, contact_id_traveleraccepted)
         
         if len(record_traveleraccepted['Items']) >= 1:
-            traveleraccepted = record_traveleraccepted['Items'][0]['created'].split('traveleraccepted_')[-1]
+            traveleraccepted = record_traveleraccepted['Items'][0]['created'].split('_')[-1]
         else:
             traveleraccepted = None
         
-        contact_id_request = 'request' + '_' + username
-        record_request = get_record(contact, contact_id_request)
+        contact_id_request = 'request' + "_" + tripid + "_" + username
+        record_request = get_record(requester_username, contact_id_request)
         
         if len(record_request['Items']) >= 1:
-            requester = record_request['Items'][0]['created'].split('request_')[-1]
+            requester = record_request['Items'][0]['created'].split('_')[-1]
         else:
             requester = None
                  
         
         if username in [ traveleraccepted, requester ]:
-           return get_record(contact, 'contacts')
+           return get_record(requester_username, 'contacts')
         
         return jsonify('You are not allowed to see user contacts'),403
     except:
@@ -570,13 +609,15 @@ def get_traveler(contact):
     username = user['cognito:username']
 
     try:
-        contact_id = 'accepted' + '_' + username
-        record = get_record(contact, contact_id)
+        tripid = contact.split('_')[0]
+        traveler_username = contact.split('_')[-1]
+        contact_id = 'accepted' + "_" + tripid + "_" + username
+        record = get_record(traveler_username, contact_id)
 
         
-        if username in record['Items'][0]['created'].split('accepted_')[-1]:
+        if username in record['Items'][0]['created'].split('_')[-1]:
             
-           return get_record(contact, 'contacts')
+           return get_record(traveler_username, 'contacts')
         
         return jsonify('You are not allowed to see user contacts'),403
     except:

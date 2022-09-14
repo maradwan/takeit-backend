@@ -39,7 +39,7 @@ def token_username():
 
 def gen_time():
     timenow = datetime.now()
-    return timenow.strftime("%Y-%m-%d_%H-%M-%S-%f")
+    return timenow.strftime("%Y-%m-%d-%H-%M-%S-%f")
 
 def today_date():
     timenow = datetime.now()
