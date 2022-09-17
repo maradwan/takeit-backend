@@ -19,7 +19,7 @@ userpoolid = "eu-west-1_1vDh1VG69"
 
 def user_limit_weight():
     """
-    Get User Limit from DB, if not use global limit
+    User Limit
     """
     get_weight()
     if weight_limit > get_weight.item_limit:
@@ -116,6 +116,7 @@ def update_weight(created):
             data['fromto'] =  data['fromcity'] + '_' + data['tocity']
 
             data['tstamp'] = tstamp(data['trdate'], 30)
+            data['updated'] = gen_time()
 
             update_weight_record(username, created, data)
             return jsonify(data),201
