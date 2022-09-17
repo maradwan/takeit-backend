@@ -26,13 +26,13 @@ def token_username():
     try:
         if 'Authorization' in request.headers:
            token = request.headers['Authorization']
-           
+
            if token.split()[0] == "Bearer":
-               user = validate_cognito_token(token.split()[1],cognito_region,cognito_user_pool_id,cognito_app_client_id) 
+               user = validate_cognito_token(token.split()[1],cognito_region,cognito_user_pool_id,cognito_app_client_id)
            #    # It is important to split as the token has one space
                return user
-           user = validate_cognito_token(token.split()[0],cognito_region,cognito_user_pool_id,cognito_app_client_id) 
-        
+           user = validate_cognito_token(token.split()[0],cognito_region,cognito_user_pool_id,cognito_app_client_id)
+
            return user
     except:
         return jsonify('Misunderstood Request'),401
@@ -44,7 +44,7 @@ def gen_time():
 def today_date():
     timenow = datetime.now()
     return timenow.strftime("%Y-%m-%d")
-    
+
 def check_username(username):
     if username == token_username():
         return True

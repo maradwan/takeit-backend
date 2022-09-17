@@ -8,7 +8,7 @@ from os import environ as env
 #region_name  = env.get("REGION_NAME")
 
 table_name = "sharing"
-region_name = "eu-west-1" 
+region_name = "eu-west-1"
 
 query_table = boto3.resource("dynamodb", region_name= region_name, verify=True).Table(table_name)
 
@@ -29,31 +29,31 @@ def get_record(username,item):
     z = {}
     x = []
     z['Items'] = []
-    
+
     response= query_table.query(
         KeyConditionExpression=Key("username").eq(username) & Key("created").eq(item))
-    
+
     for i in response[u'Items']:
         x.append( json.loads(json.dumps(i, cls=DecimalEncoder)))
-        
+
     z['Items'] = x
-    
+
     return z
 
 def get_record_begins_with(username,item):
     z = {}
     x = []
     z['Items'] = []
-    
+
     response= query_table.query(
         KeyConditionExpression=Key("username").eq(username) & Key("created").begins_with(item))
 
-    
+
     for i in response[u'Items']:
         x.append( json.loads(json.dumps(i, cls=DecimalEncoder)))
-        
+
     z['Items'] = x
-    
+
     return z
 
 def get_records(username,created=None):
@@ -72,9 +72,9 @@ def get_records(username,created=None):
 
         elif not created and 'contacts' not in i['created'] and 'account' not in i['created'] and 'accepted_' not in i['created'] and 'pending_' not in i['created'] and 'request_' not in i['created']:
             x.append( json.loads(json.dumps(i, cls=DecimalEncoder)))
-    
+
     z['Items'] = x
-            
+
     return z
 
 def delete_record(username,created):
@@ -84,8 +84,8 @@ def delete_record(username,created):
             'created' : created
             }
             )
-    
-def delete_records(username):   
+
+def delete_records(username):
     items= query_table.query(
         KeyConditionExpression=Key("username").eq(username)
     )
@@ -115,15 +115,15 @@ def update_weight_record(username,created,update_item):
                 ':tstamp': update_item['tstamp']
                 }
             )
-    
-def get_global_index(index,key,date,limit,today_date,lastkey=None):
-    
+
+def get_global_index(index,key,city,limit,today_date,lastkey=None):
+
     if lastkey:
 
         return query_table.query(
         IndexName=index,KeyConditionExpression=Key(
-            key).eq(date),Limit=int(limit),FilterExpression=Attr('acceptto').gte(today_date),ExclusiveStartKey=json.loads(lastkey))
+            key).eq(city),Limit=int(limit),FilterExpression=Attr('acceptto').gte(today_date),ExclusiveStartKey=json.loads(lastkey))
 
     return query_table.query(
         IndexName=index,KeyConditionExpression=Key(
-            key).eq(date),Limit=int(limit),FilterExpression=Attr('acceptto').gte(today_date))
+            key).eq(city),Limit=int(limit),FilterExpression=Attr('acceptto').gte(today_date))
