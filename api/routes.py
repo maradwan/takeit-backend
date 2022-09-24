@@ -147,7 +147,6 @@ def add_contacts():
 
     user = token_username()
     username = user['cognito:username']
-    name     = user['name']
 
     try:
         data = request.json
@@ -165,14 +164,15 @@ def add_contacts():
             contact['linkedin'] = (data['linkedin'])
         if 'telegram' in data:
             contact['telegram'] = (data['telegram'])
-        if 'e-mail' in data:
-            contact['e-mail'] = (data['e-mail'])
+        if 'email' in data:
+            contact['email'] = (data['email'])
+        if 'cname' in data:
+            contact['cname'] = (data['cname'])
 
-        if len(data) <= 7:
+        if len(data) <= 8:
 
             contact['username'] = username
             contact['created'] = "contacts"
-            contact['name'] = name
 
             add_record(contact)
             return jsonify(contact),201
@@ -268,6 +268,7 @@ def share_request():
 
             tripid = data['tripid']
             del data['traveleruser']
+            del data['trdate']
             #del data['tripid']
 
             data['username'] = username
@@ -278,7 +279,7 @@ def share_request():
 
 
         # Adding pending to the traveler
-            data['fromuser'] = username
+            #data['fromuser'] = username
             data['created'] = "pending" + "_" + tripid + "_" + username
             data['tripid'] = tripid
 
@@ -356,6 +357,7 @@ def traveler_reject_request(created):
 
         data['tstamp'] = tstamp
         data['tripid'] = tripid
+        data['dtime']  = gen_time()
 
         if response['Items'] == []:
             return jsonify('Not Found'),404
@@ -458,27 +460,27 @@ def requester_delete_traveleraccepted(contact):
         return jsonify('Misunderstood Request'),400
 
 
-@app.route('/share-request/requester/request/<contact>', methods=['DELETE'])
-def delete_requester(contact):
+@app.route('/share-request/requester/request/<request_id>', methods=['DELETE'])
+def delete_requester(request_id):
 
     user = token_username()
     username = user['cognito:username']
 
     try:
-        response = get_record(username, contact)
+        response = get_record(username, request_id)
         if response['Items'] == []:
             return jsonify('Not Found'),404
 
         #Delete request from requester
-        delete_record(username, contact)
+        delete_record(username, request_id)
 
         #Delete pending from receiver
-        traveler_user = contact.split('_')[-1]
-        tripid = contact.split('_')[1]
+        traveler_user = request_id.split('_')[-1]
+        tripid = request_id.split('_')[1]
         traveler_pending = 'pending' + "_" + tripid + "_" + username
         delete_record(traveler_user, traveler_pending)
 
-        return jsonify("Deleted: {}".format(contact)),200
+        return jsonify("Deleted: {}".format(request_id)),200
 
     except:
         return jsonify('Misunderstood Request'),400
@@ -532,6 +534,50 @@ def declined_traveler():
     except:
         return jsonify('Misunderstood Request'),400
 
+@app.route('/share-request/requester/<requester_id>', methods=['GET'])
+def get_requester_request(requester_id):
+
+    user = token_username()
+    username = user['cognito:username']
+
+    try:
+        response = get_record(username,requester_id)
+        if response['Items'] ==[]:
+            return jsonify('no records found'),404
+
+        return jsonify(response),200
+    except:
+        return jsonify('Misunderstood Request'),400
+
+@app.route('/share-request/requester/accepted/<requester_id>', methods=['GET'])
+def get_requester_accept(requester_id):
+
+    user = token_username()
+    username = user['cognito:username']
+
+    try:
+        response = get_record(username,requester_id)
+        if response['Items'] ==[]:
+            return jsonify('no records found'),404
+
+        return jsonify(response),200
+    except:
+        return jsonify('Misunderstood Request'),400
+
+@app.route('/share-request/requester/declined/<requester_id>', methods=['GET'])
+def get_requester_decalined(requester_id):
+
+    user = token_username()
+    username = user['cognito:username']
+
+    try:
+        response = get_record(username,requester_id)
+        if response['Items'] ==[]:
+            return jsonify('no records found'),404
+
+        return jsonify(response),200
+    except:
+        return jsonify('Misunderstood Request'),400
 
 @app.route('/share-request/requester/accepted', methods=['GET'])
 def accepted_requester():

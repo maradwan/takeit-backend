@@ -70,7 +70,7 @@ def get_records(username,created=None):
         elif created=='account' and 'account' in i['created']:
             x.append( json.loads(json.dumps(i, cls=DecimalEncoder)))
 
-        elif not created and 'contacts' not in i['created'] and 'account' not in i['created'] and 'accepted_' not in i['created'] and 'pending_' not in i['created'] and 'request_' not in i['created']:
+        elif not created and 'contacts' not in i['created'] and 'account' not in i['created'] and 'accepted' not in i['created'] and 'pending' not in i['created'] and 'request' not in i['created'] and 'declined' not in i['created'] and 'traveleraccepted' not in i['created'] and 'travelerdeclined' not in i['created']:
             x.append( json.loads(json.dumps(i, cls=DecimalEncoder)))
 
     z['Items'] = x
@@ -102,7 +102,7 @@ def update_weight_record(username,created,update_item):
     return query_table.update_item(
                 Key={'username': username, 'created': created
                 },
-                UpdateExpression='SET acceptfrom = :acceptfrom, acceptto = :acceptto, fromcity = :fromcity, tocity = :tocity, trdate = :trdate, allowed = :allowed, currency = :currency, fromto = :fromto, tstamp = :tstamp',
+                UpdateExpression='SET acceptfrom = :acceptfrom, acceptto = :acceptto, fromcity = :fromcity, tocity = :tocity, trdate = :trdate, allowed = :allowed, currency = :currency, fromto = :fromto, tstamp = :tstamp , updated = :updated',
                 ExpressionAttributeValues={
                 ':acceptfrom': update_item['acceptfrom'],
                 ':acceptto': update_item['acceptto'],
@@ -112,7 +112,8 @@ def update_weight_record(username,created,update_item):
                 ':allowed': update_item['allowed'],
                 ':currency': update_item['currency'],
                 ':fromto': update_item['fromto'],
-                ':tstamp': update_item['tstamp']
+                ':tstamp': update_item['tstamp'],
+                ':updated': update_item['updated']
                 }
             )
 
