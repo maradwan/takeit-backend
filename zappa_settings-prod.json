@@ -12,17 +12,16 @@
                     "arn:aws:cognito-idp:eu-west-1:862514435220:userpool/eu-west-1_xgsIlhDow"
                 ]
             },
-        "s3_bucket": "zappa-takeit-prod",    
+        "s3_bucket": "zappa-takeit-prod",
         "runtime": "python3.8",
         "attach_policy":"takeit-policy.json",
         "aws_environment_variables": {"TABLE_NAME": "sharing",
                                   "REGION_NAME": "eu-west-1",
-                                  "WEIGHT_LIMIT": "5",
-                                  "SOURCE_EMAIL": "noreply@gozeit.com",
+                                  "WEIGHT_LIMIT": "50",
+                                  "SOURCE_EMAIL": "noreply@gotake-it.com",
                                   "USERPOOLID": "eu-west-1_xgsIlhDow",
-                                  "COGNITOR_CLIENTID": "75kr6sdi27mlllm7k2uggpidli"
-
-
+                                  "COGNITOR_CLIENTID": "75kr6sdi27mlllm7k2uggpidli",
+                                  "SUBJ_REMOVE_ACCOUNT": "Deleted Your TakeIT Account"
          }
 
     }

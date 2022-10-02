@@ -4,18 +4,45 @@ from os import environ as env
 from api.auth import gen_time, token_username, today_date
 from api.models import get_record, add_record, get_records, delete_record, delete_records, update_weight_record, get_global_index, get_record_begins_with
 from api import app
-from time import mktime, time
+from time import mktime
 from datetime import datetime, timedelta
 
-#weight_limit = env.get("WEIGHT_LIMIT")
-#region_name  = env.get("REGION_NAME")
+weight_limit = env.get("WEIGHT_LIMIT")
+region_name  = env.get("REGION_NAME")
+subj_remove_account = env.get("SUBJ_REMOVE_ACCOUNT")
+source_email = env.get("SOURCE_EMAIL")
 userpoolid = env.get("USERPOOLID")
 
 
-region_name = "eu-west-1"
-weight_limit = 100
-userpoolid = "eu-west-1_1vDh1VG69"
+def message_body_deleted_account(name):
+    return """Hello {},
 
+We deleted your account as requested.
+
+
+Sincerely,
+TakeIT Team""".format(name)
+
+def notification(to_addresses, msg, subj,source_email=source_email):
+    email_client = boto3.client('ses',region_name= region_name, verify=True)
+    return email_client.send_email(
+        Destination={
+            'ToAddresses': [to_addresses],
+            },
+            Message={
+                'Body': {
+                    'Text': {
+                        'Charset': 'UTF-8',
+                        'Data': msg,
+                        },
+                        },
+                        'Subject': {
+                            'Charset': 'UTF-8',
+                            'Data': subj,
+                            },
+                            },
+                            Source=source_email,
+    )
 
 def user_limit_weight():
     """
@@ -740,18 +767,17 @@ def user_account():
 def delete_account():
     user = token_username()
     username = user['cognito:username']
+    email = user['email']
+    name = user['name']
 
     try:
         cognito = boto3.client('cognito-idp',region_name = region_name, verify=True)
-        cognito.admin_delete_user(
-            UserPoolId= userpoolid,
-            Username= username
-            )
+        cognito.admin_delete_user(UserPoolId= userpoolid, Username= username)
 
         delete_records(username)
 
-        #msg = message_body_deleted_account(username)
-        #notification(username, msg, subj_remove_account)
+        msg = message_body_deleted_account(name)
+        notification(email, msg, subj_remove_account)
 
         return jsonify('Removing account has been requested'),200
     except:
