@@ -4,11 +4,8 @@ import decimal
 import simplejson as json
 from os import environ as env
 
-#table_name = env.get("TABLE_NAME")
-#region_name  = env.get("REGION_NAME")
-
-table_name = "sharing"
-region_name = "eu-west-1"
+table_name = env.get("TABLE_NAME")
+region_name  = env.get("REGION_NAME")
 
 query_table = boto3.resource("dynamodb", region_name= region_name, verify=True).Table(table_name)
 
