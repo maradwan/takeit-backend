@@ -7,7 +7,7 @@ from api import app
 from time import mktime
 from datetime import datetime, timedelta
 
-weight_limit = env.get("WEIGHT_LIMIT")
+weight_limit = int(env.get("WEIGHT_LIMIT"))
 region_name  = env.get("REGION_NAME")
 subj_remove_account = env.get("SUBJ_REMOVE_ACCOUNT")
 source_email = env.get("SOURCE_EMAIL")
