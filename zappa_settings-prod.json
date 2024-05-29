@@ -18,9 +18,11 @@
         "aws_environment_variables": {"TABLE_NAME": "sharing",
                                   "REGION_NAME": "eu-west-1",
                                   "WEIGHT_LIMIT": "50",
+                                  "SUBSCRIPTION_LIMIT": "1",
                                   "SOURCE_EMAIL": "noreply@gotake-it.com",
                                   "USERPOOLID": "eu-west-1_xgsIlhDow",
                                   "COGNITOR_CLIENTID": "75kr6sdi27mlllm7k2uggpidli",
+                                  "TRIPS_QUEUE_URL": "https://sqs.eu-west-1.amazonaws.com/862514435220/trips",
                                   "SUBJ_REMOVE_ACCOUNT": "Deleted Your TakeIT Account"
          }
 

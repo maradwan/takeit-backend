@@ -1,18 +1,23 @@
+import json
 from flask import request, jsonify
 import boto3
 from os import environ as env
 from api.auth import gen_time, token_username, today_date
 from api.models import get_record, add_record, get_records, delete_record, delete_records, update_weight_record, get_global_index, get_record_begins_with
+from api.subscription import add_subscription, get_subscriptions, delete_subscription 
 from api import app
 from time import mktime
 from datetime import datetime, timedelta
 
+from api.notification import send_push_notification
+
+subscription_limit = int(env.get("SUBSCRIPTION_LIMIT"))
 weight_limit = int(env.get("WEIGHT_LIMIT"))
 region_name  = env.get("REGION_NAME")
 subj_remove_account = env.get("SUBJ_REMOVE_ACCOUNT")
 source_email = env.get("SOURCE_EMAIL")
 userpoolid = env.get("USERPOOLID")
-
+trips_queue_url = env.get("TRIPS_QUEUE_URL")
 
 def message_body_deleted_account(name):
     return """Hello {},
@@ -71,6 +76,49 @@ def tstamp(date,days):
     new = orig + timedelta(days=days)
     return int(new.timestamp())
 
+def get_device_token(username):
+
+    try:
+        response = get_record(username,'devices')
+        if response['Items'] ==[]:
+            return jsonify('no records found'),404
+
+        token = response['Items'][0]['token']
+        return (token)
+    except:
+        return jsonify('Misunderstood Request'),400
+
+def get_trip_info(username,tripid):
+    try:
+        response = get_record(username,tripid)
+        if response['Items'] ==[]:
+            return jsonify('no records found'),404
+
+        return (response['Items'][0])
+    except:
+        return jsonify('Misunderstood Request'),400
+
+@app.route('/devices', methods=['POST'])
+def add_device():
+
+    user = token_username()
+    username = user['cognito:username']
+
+
+    try:
+        data = request.json
+        if data['deviceID'] and data['token'] and len(data) == 2:
+            data['username'] = username
+            data['created'] = "devices"
+
+            #data['tstamp'] = tstamp(data['trdate'], 30)
+
+            add_record(data)
+            return jsonify(data),201
+
+        return jsonify('You must fill in all of the required fields *'),400
+    except:
+        return jsonify('Misunderstood Request'),400
 
 @app.route('/weight', methods=['POST'])
 def add_weight():
@@ -92,6 +140,11 @@ def add_weight():
             data['tstamp'] = tstamp(data['trdate'], 30)
 
             add_record(data)
+            
+            # Send to SQS the trip details
+            sqs = boto3.client('sqs')
+            sqs.send_message(QueueUrl=trips_queue_url,MessageBody=json.dumps(data))                                                                                                                                                            
+
             return jsonify(data),201
 
         return jsonify('You must fill in all of the required fields *'),400
@@ -313,7 +366,15 @@ def share_request():
             data['username'] = request_user
             add_record(data)
 
-            return jsonify('request has been sent'),201
+            try:
+                token = get_device_token(request_user)
+                trip= get_trip_info(request_user,tripid)
+                title = "New Contact Request for your Trip"
+                body = "Your Trip From {} To {}, and The Travel date {}".format(trip['fromcity'],trip['tocity'],trip['trdate'])
+                send_push_notification(token,title,body)
+                return jsonify('request has been sent'),201
+            except:
+                return jsonify('request has been sent'),201
 
 
         return jsonify('You must fill in all of the required fields *'),400
@@ -363,7 +424,15 @@ def traveler_accept_request(created):
 
         add_record(data)
 
-        return jsonify('request has been accepted'),201
+        try:
+            token = get_device_token(request_creator)
+            trip  = get_trip_info(username,tripid)
+            title = "Package Accepted From {} To {}".format(trip['fromcity'],trip['tocity'])
+            body  = "Traveler Accepted Your Package For The Trip From {} To {}, and The Travel Date {}".format(trip['acceptfrom'],trip['acceptto'],trip['trdate'])
+            send_push_notification(token,title,body)
+            return jsonify('request has been accepted'),201
+        except:
+            return jsonify('request has been accepted'),201
     except:
         return jsonify('Misunderstood Request'),400
 
@@ -408,7 +477,15 @@ def traveler_reject_request(created):
         data['username'] = request_creator
         add_record(data)
 
-        return jsonify("Deleted: {}".format(created)),200
+        try:
+            token = get_device_token(request_creator)
+            trip  = get_trip_info(username,tripid)
+            title = "Package Declined From {} To {}".format(trip['fromcity'],trip['tocity'])
+            body  = "Traveler Declined Your Package For The Trip From {} To {}, and The Travel Date {}".format(trip['acceptfrom'],trip['acceptto'],trip['trdate'])
+            send_push_notification(token,title,body)
+            return jsonify("Deleted: {}".format(created)),200
+        except:
+            return jsonify("Deleted: {}".format(created)),200
 
     except:
         return jsonify('Misunderstood Request'),400
@@ -433,7 +510,15 @@ def traveler_delete_declined(contact):
         request_creator = "travelerdeclined" + "_" + tripid + "_" + username
         delete_record(receiver_id, request_creator)
 
-        return jsonify("Deleted: {}".format(contact)),200
+        try:
+            token = get_device_token(receiver_id)
+            trip  = get_trip_info(username,tripid)
+            title = "The traveler declined your contacts"
+            body  = "Traveler is not interested in the trip from {} to {}, and the travel date {}".format(trip['fromcity'],trip['tocity'],trip['trdate'])
+            send_push_notification(token,title,body)
+            return jsonify("Deleted: {}".format(contact)),200
+        except:
+            return jsonify("Deleted: {}".format(contact)),200
 
     except:
         return jsonify('Misunderstood Request'),400
@@ -457,7 +542,15 @@ def traveler_delete_accept(contact):
         request_creator = "traveleraccepted" + "_" + tripid + "_" + username
         delete_record(receiver_id, request_creator)
 
-        return jsonify("Deleted: {}".format(contact)),200
+        try:
+            token = get_device_token(receiver_id)
+            trip  = get_trip_info(username,tripid)
+            title = "The traveler removed the shared contacts"
+            body  = "Traveler is not interested in the trip from {} to {}, and the travel date {}".format(trip['fromcity'],trip['tocity'],trip['trdate'])
+            send_push_notification(token,title,body)
+            return jsonify("Deleted: {}".format(contact)),200
+        except:
+            return jsonify("Deleted: {}".format(contact)),200
 
     except:
         return jsonify('Misunderstood Request'),400
@@ -481,7 +574,16 @@ def requester_delete_traveleraccepted(contact):
         request_creator = "accepted" + "_" + tripid + "_" + username
         delete_record(receiver_id, request_creator)
 
-        return jsonify("Deleted: {}".format(contact)),200
+        try:
+            token = get_device_token(receiver_id)
+            trip  = get_trip_info(receiver_id,tripid)
+            title = "The requester removed the shared contacts"
+            body  = "Requester is not interested in the trip from {} to {}, and the travel date {}".format(trip['fromcity'],trip['tocity'],trip['trdate'])
+            send_push_notification(token,title,body)
+            return jsonify("Deleted: {}".format(contact)),200
+        except:
+            return jsonify("Deleted: {}".format(contact)),200
+
 
     except:
         return jsonify('Misunderstood Request'),400
@@ -507,7 +609,15 @@ def delete_requester(request_id):
         traveler_pending = 'pending' + "_" + tripid + "_" + username
         delete_record(traveler_user, traveler_pending)
 
-        return jsonify("Deleted: {}".format(request_id)),200
+        try:
+            token = get_device_token(traveler_user)
+            trip  = get_trip_info(traveler_user,tripid)
+            title = "The requester is not sending the package"
+            body  = "Requester is not interested in the trip from {} to {}, and the travel date {}".format(trip['fromcity'],trip['tocity'],trip['trdate'])
+            send_push_notification(token,title,body)
+            return jsonify("Deleted: {}".format(request_id)),200
+        except:
+            return jsonify("Deleted: {}".format(request_id)),200
 
     except:
         return jsonify('Misunderstood Request'),400
@@ -744,6 +854,20 @@ def fromto(city):
     except:
         return jsonify('Misunderstood Request'),400
 
+
+##@app.route('/test_notify', methods=['GET'])
+#def test_notify():
+#    try:
+        #trip=get_trip_info('b5cd3208-a01f-439b-af9b-a35728cfab75','2024-05-06-00-05-09-663545')
+#        token = get_device_token('6391159b-dc53-40c3-bd64-35516236f933')
+#        print (token)
+        #title = "Package Accepted From {} To {}".format(trip['fromcity'],trip['tocity'])
+        #body = "Traveler Accepted Your Package For The Trip From {} To {}, and The Travel date {}".format(trip['acceptfrom'],trip['acceptto'],trip['trdate'])
+#        send_push_notification(token,title,body)
+#        return jsonify(token),200
+#    except:
+#        return True
+
 @app.route('/account', methods=['GET'])
 def user_account():
       try:
@@ -782,3 +906,75 @@ def delete_account():
         return jsonify('Removing account has been requested'),200
     except:
         return jsonify('Misunderstood Request'),400
+
+    
+def user_limit_subscription():
+    """
+    User Limit Subscription
+    """
+    list_subscription()
+    if subscription_limit > list_subscription.item_limit:
+        return False
+    return True    
+
+    
+@app.route('/subscription', methods=['POST'])
+def create_subscription():
+    
+    user = token_username()
+    username = user['cognito:username']
+    
+    if (user_limit_subscription()):
+        return jsonify('{} Records Limit Reached'.format(list_subscription.item_limit)),426
+
+    try:
+        data = request.json
+
+        if  data['fromcity'] and data['tocity'] and len(data) == 2:
+            data['username'] = username
+            data['created'] = gen_time()
+            data['fromto'] =  data['fromcity'] + '_' + data['tocity']
+            
+            #Today Date
+            data['tstamp'] = tstamp(datetime.now().strftime("%Y-%m-%d"),30)
+            
+            add_subscription(data)
+            return jsonify(data),201
+
+        return jsonify('You must fill in all of the required fields *'),400
+    except:
+        return jsonify('Misunderstood Request'),400
+
+
+@app.route('/subscription', methods=['GET'])
+def list_subscription():
+
+      user = token_username()
+      username = user['cognito:username']
+
+      try:
+          response = get_subscriptions(username)
+
+          list_subscription.item_limit =len(response['Items'])
+
+
+          if response['Items'] ==[]:
+                return jsonify('no records found'),404
+
+          return jsonify(response),200
+      except:
+          return jsonify('Misunderstood Request'),400
+
+
+@app.route('/subscription/<created>', methods=['DELETE'])
+def remove_subscription(created):
+    
+  user = token_username()
+  username = user['cognito:username']
+  try:
+      delete_subscription(username, created)
+      return jsonify("Deleted: {}".format(created)),200
+  except:
+      return jsonify('Misunderstood Request'),400
+  
+  

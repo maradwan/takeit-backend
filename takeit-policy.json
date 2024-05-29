@@ -53,6 +53,15 @@
                 "cognito-idp:AdminGetUser"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor5",
+            "Effect": "Allow",
+            "Action": [
+				"sqs:*"
+
+            ],
+            "Resource": ["arn:aws:sqs:*:*:trips"]
         }
     ]
 }

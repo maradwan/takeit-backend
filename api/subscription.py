@@ -4,7 +4,8 @@ import decimal
 import simplejson as json
 from os import environ as env
 
-table_name = env.get("TABLE_NAME")
+
+table_name = "subscription"
 region_name  = env.get("REGION_NAME")
 
 query_table = boto3.resource("dynamodb", region_name= region_name, verify=True).Table(table_name)
@@ -19,10 +20,10 @@ class DecimalEncoder(json.JSONEncoder):
                 return int(o)
         return super(DecimalEncoder, self).default(o)
 
-def add_record(item):
+def add_subscription(item):
     return query_table.put_item(Item=item)
 
-def get_record(username,item):
+def get_subscription(username,item):
     z = {}
     x = []
     z['Items'] = []
@@ -37,23 +38,8 @@ def get_record(username,item):
 
     return z
 
-def get_record_begins_with(username,item):
-    z = {}
-    x = []
-    z['Items'] = []
 
-    response= query_table.query(
-        KeyConditionExpression=Key("username").eq(username) & Key("created").begins_with(item))
-
-
-    for i in response[u'Items']:
-        x.append( json.loads(json.dumps(i, cls=DecimalEncoder)))
-
-    z['Items'] = x
-
-    return z
-
-def get_records(username,created=None):
+def get_subscriptions(username,created=None):
     z = {}
     x = []
     z['Items'] = []
@@ -76,7 +62,7 @@ def get_records(username,created=None):
 
     return z
 
-def delete_record(username,created):
+def delete_subscription(username,created):
     return query_table.delete_item(
         Key={
             'username': username,
@@ -84,7 +70,7 @@ def delete_record(username,created):
             }
             )
 
-def delete_records(username):
+def delete_subscriptions(username):
     items= query_table.query(
         KeyConditionExpression=Key("username").eq(username)
     )
@@ -96,34 +82,3 @@ def delete_records(username):
             }
             )
     return True
-
-def update_weight_record(username,created,update_item):
-    return query_table.update_item(
-                Key={'username': username, 'created': created
-                },
-                UpdateExpression='SET acceptfrom = :acceptfrom, acceptto = :acceptto, fromcity = :fromcity, tocity = :tocity, trdate = :trdate, allowed = :allowed, currency = :currency, fromto = :fromto, tstamp = :tstamp , updated = :updated',
-                ExpressionAttributeValues={
-                ':acceptfrom': update_item['acceptfrom'],
-                ':acceptto': update_item['acceptto'],
-                ':fromcity': update_item['fromcity'],
-                ':tocity': update_item['tocity'],
-                ':trdate': update_item['trdate'],
-                ':allowed': update_item['allowed'],
-                ':currency': update_item['currency'],
-                ':fromto': update_item['fromto'],
-                ':tstamp': update_item['tstamp'],
-                ':updated': update_item['updated']
-                }
-            )
-
-def get_global_index(index,key,city,limit,today_date,lastkey=None):
-
-    if lastkey:
-
-        return query_table.query(
-        IndexName=index,KeyConditionExpression=Key(
-            key).eq(city),Limit=int(limit),FilterExpression=Attr('acceptto').gte(today_date),ExclusiveStartKey=json.loads(lastkey))
-
-    return query_table.query(
-        IndexName=index,KeyConditionExpression=Key(
-            key).eq(city),Limit=int(limit),FilterExpression=Attr('acceptto').gte(today_date))
