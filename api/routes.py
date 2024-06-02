@@ -923,7 +923,6 @@ def create_subscription():
     
     user = token_username()
     username = user['cognito:username']
-    
     if (user_limit_subscription()):
         return jsonify('{} Records Limit Reached'.format(list_subscription.item_limit)),426
 
@@ -951,7 +950,6 @@ def list_subscription():
 
       user = token_username()
       username = user['cognito:username']
-
       try:
           response = get_subscriptions(username)
 
@@ -971,6 +969,7 @@ def remove_subscription(created):
     
   user = token_username()
   username = user['cognito:username']
+
   try:
       delete_subscription(username, created)
       return jsonify("Deleted: {}".format(created)),200

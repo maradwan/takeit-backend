@@ -12,6 +12,8 @@
                 "dynamodb:UpdateItem"
             ],
             "Resource": [
+                "arn:aws:dynamodb:*:*:table/subscription/index/*",
+                "arn:aws:dynamodb:*:*:table/subscription",
                 "arn:aws:dynamodb:*:*:table/sharing/index/*",
                 "arn:aws:dynamodb:*:*:table/sharing"
             ]
